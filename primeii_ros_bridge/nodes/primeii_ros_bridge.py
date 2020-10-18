@@ -17,31 +17,38 @@ fingerNames = [ "thumb", "index", "middle", "ring", "pinky" ]
 def callBack(msg):
   pass
 
-def str2RosMsg(str):
+def str2RosMsg(string):
+  try:
+    jj = json.loads(string)
+  except ValueError as ee:
+    #rospy.logerr()
+    return None
   msg = GlovesData()
-  jj = json.loads(str)
+  msg.header.stamp = rospy.Time.now()
+  msg.header.frame_id = ''  
   for i in range(len(jj)):
-    gloveNum = 'glove' + str(i)
-    jj[gloveNum]['deviceid']
-    jj[gloveNum]['dongleid']
-    jj[gloveNum]['handtype']
-    jj[gloveNum]['wristIMU']['x']
-    jj[gloveNum]['wristIMU']['y']
-    jj[gloveNum]['wristIMU']['z']
-    jj[gloveNum]['wristIMU']['w']
+    glove = GloveData()
+    gloveNum = 'glove' + str(i+1)
+    glove.deviceid = jj[gloveNum]['deviceid']
+    glove.dongleid = jj[gloveNum]['dongleid']
+    glove.handtype = jj[gloveNum]['handtype']
+    glove.wristIMU.x = jj[gloveNum]['wristIMU']['x']
+    glove.wristIMU.y = jj[gloveNum]['wristIMU']['y']
+    glove.wristIMU.z = jj[gloveNum]['wristIMU']['z']
+    glove.wristIMU.w = jj[gloveNum]['wristIMU']['w']
     fingersFlex = jj[gloveNum]['fingers']['fingersFlex']
     for j in range(len(fingersFlex)):
-      fingersFlex[fingerNames[j]]['Joint1Spread']
-      fingersFlex[fingerNames[j]]['Joint1Stretch']
-      fingersFlex[fingerNames[j]]['Joint2Stretch']
-      fingersFlex[fingerNames[j]]['Joint3Stretch']
+      glove.fingersFlex[j].Joint1Spread = fingersFlex[fingerNames[j]]['Joint1Spread']
+      glove.fingersFlex[j].Joint1Stretch = fingersFlex[fingerNames[j]]['Joint1Stretch']
+      glove.fingersFlex[j].Joint2Stretch = fingersFlex[fingerNames[j]]['Joint2Stretch']
+      glove.fingersFlex[j].Joint3Stretch = fingersFlex[fingerNames[j]]['Joint3Stretch']
     fingersIMU = jj[gloveNum]['fingers']['fingersIMU']
     for j in range(len(fingersIMU)):
-      fingersIMU[fingerNames[j]]['x']
-      fingersIMU[fingerNames[j]]['y']
-      fingersIMU[fingerNames[j]]['z']
-      fingersIMU[fingerNames[j]]['w']
-  
+      glove.fingersIMU[j].x = fingersIMU[fingerNames[j]]['x']
+      glove.fingersIMU[j].y = fingersIMU[fingerNames[j]]['y']
+      glove.fingersIMU[j].z = fingersIMU[fingerNames[j]]['z']
+      glove.fingersIMU[j].w = fingersIMU[fingerNames[j]]['w']
+    msg.glovesData.append(glove)
   return msg
 
 def main():
@@ -69,11 +76,19 @@ def main():
     
 
   def loop():
-    r = rospy.Rate(100)
+    r = rospy.Rate(200)
     while not rospy.is_shutdown():
-      string = client.recv(4096)
+      try:
+        string = client.recv(4096)
+      except:
+        rospy.logwarn("read message timeout!!!")    
+        continue  
+      #print len(string)
       msg = str2RosMsg(string)
-      pub.publish(msg)
+      if msg:
+        pub.publish(msg)
+      else:
+        pass
       r.sleep()
     
   t = threading.Thread(target=loop)
