@@ -16,6 +16,7 @@ add_message_files(
   FingerFlex.msg
   GloveData.msg
   GlovesData.msg
+  GloveHaptic.msg
 )
 
 generate_messages(

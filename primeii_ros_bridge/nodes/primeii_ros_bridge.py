@@ -7,15 +7,26 @@ import socket
 import threading
 
 import rospy 
-from primeii_ros_msgs.msg import FingerFlex, GloveData, GlovesData
+from primeii_ros_msgs.msg import FingerFlex, GloveData, GlovesData, GloveHaptic
 
 sub = None
 pub = None
+client = None
 
 fingerNames = [ "thumb", "index", "middle", "ring", "pinky" ]
 
 def callBack(msg):
-  pass
+  for i in range(len(msg.hapticPower)):
+    if msg.hapticPower[i] > 1.0:
+      rospy.logwarn("GloveHaptic message hapticPower data error!!!")
+      return
+
+  jj = {'dongleid':msg.dongleid, 'handtype':msg.handtype, 'power':msg.hapticPower}
+  ss = json.dumps(jj)
+  try:
+    client.send(ss)
+  except:
+    rospy.logwarn("send message faild!!!")
 
 def str2RosMsg(string):
   try:
@@ -52,14 +63,14 @@ def str2RosMsg(string):
   return msg
 
 def main():
-  global sub, pub
+  global sub, pub, client
   rospy.init_node("primeii_ros_bridge")
   #get param
   hostname = rospy.get_param("~hostname", default="192.168.3.141")
   hostport = rospy.get_param("~hostport", default=10086)
 
   #init Subscriber and Publisher
-  #sub = rospy.Subscriber("obj_point", PointStamped, callBack)
+  sub = rospy.Subscriber("GloveHaptic", GloveHaptic, callBack)
   pub = rospy.Publisher("GlovesData", GlovesData, queue_size=1)
 
   client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -74,9 +85,8 @@ def main():
       rospy.loginfo("try connect %s again", hostname)
       time.sleep(1)
     
-
   def loop():
-    r = rospy.Rate(200)
+    r = rospy.Rate(300)
     while not rospy.is_shutdown():
       try:
         string = client.recv(4096)
